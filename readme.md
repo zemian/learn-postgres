@@ -5,8 +5,9 @@ https://www.postgresql.org/
 ## Quick Start
 
 ```sh
-createdb testdb
-cat examples/test.sql|psql testdb 
+createuser -s -P zemian # Enter password 'test123' when prompted
+createdb -O zemian testdb
+cat examples/test.sql|psql -U zemian testdb
 ```
 
 ## Helpful CLI commands:
@@ -74,24 +75,21 @@ You should know the difference between these:
 - DB user       The DB user that used to connect to DB and assign DB privileges
 - DB name       The DB instance that holds your tables and other data
 
-A typical default setup for PostgreSQL is to create a System user that has same name as the DB user. Since
-a default database name 'postgres' and DB user 'postgres' is often automatically created, we often
-create a special System user account named 'postgres' to start the DB server process as well.
+A typical default setup for PostgreSQL is to create a System user that has same name as the DB user. Since a default database name 'postgres' and DB user 'postgres' is often automatically created, we often create a special System user account named 'postgres' to start the DB server process as well.
 
 However, a normal system user may setup similar way that match to a DB user, and create a DB with same name. 
-If we do this then the 'psql' client can be started without any extra arguments. Because the 'psql' has the
-following default:
+If we do this then the 'psql' client can be started without any extra arguments. Because the 'psql' has the following default:
 
-    bash> psql -U <current_user_name> <current_user_name>
+    bash> psql -U <system_user_name> <system_user_name>
 
-So for a system user 'zemian' who logged in to a terminal, the following will connect to 'zemian' DB:
+So for a system user 'zemian' who logged in to a terminal, the following will connect to `zemian` DB:
     
     bash> psql
     
     # Now verify current connected user
     zemian=# select current_user;
     
-## Create A New DB User
+## Create A New DB Users
 
 To create a super user same name as your own system user:
 
@@ -114,7 +112,7 @@ To change DB user password (you need to login as a superuser first):
 
 NOTE: You should create a new DB user before a new DB, so that the DB user can be used as the DB owner!
 
-Connect to DB with 'postgres' as superuser, and then create a new DB with 'mydb' DB user as the owner:
+Connect to DB with 'postgres' as superuser, and then create a new DB with `mydb` DB user as the owner:
 
     bash> createdb -U postgres -O mydb mydb
     bash> psql -U mydb mydb
@@ -131,3 +129,9 @@ INSERT INTO customers VALUES(1, 'Zemian', 'Deng');
 INSERT INTO customers VALUES(2, 'John', 'Smith');
 SELECT * FROM customers;
 ```
+
+## Test Query
+
+    SELECT 1
+    
+https://stackoverflow.com/questions/3668506/efficient-sql-test-query-or-validation-query-that-will-work-across-all-or-most
