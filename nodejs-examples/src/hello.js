@@ -1,3 +1,6 @@
+// Test DB Connection
+// https://node-postgres.com
+
 const { Client } = require('pg');
 //const client = new Client();
 const client = new Client({
