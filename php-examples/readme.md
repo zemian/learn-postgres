@@ -1,5 +1,7 @@
 You need to install PHP to run this example
 
-## PHP with MySQL Setup
+## PHP with PostgreSQL Setup
 
-Most PHP has MySQL enabled. If not ensure you enable it during compile.
+Enable with `--with-pgsql=[DIR]` in `configure` script.
+
+See https://www.php.net/manual/en/book.pgsql.php
