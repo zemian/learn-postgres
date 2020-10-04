@@ -1,8 +1,6 @@
 <?php
 
 // Example to test simple CRUD operations
-$conn = pg_connect("host=localhost dbname=testdb user=zemian password=test123")
-    or die('Could not connect: ' . pg_last_error());
 
 function insert($conn, $cat, $price, $qty) {
 	$sql = 'INSERT INTO test(cat, price, qty) VALUES ($1, $2, $3) RETURNING id';
@@ -14,55 +12,67 @@ function insert($conn, $cat, $price, $qty) {
 	return $ret;
 }
 
-function select_all($conn) {
-	$ret = [];
-	$sql = 'SELECT * FROM test';
-	$result = pg_query_params($conn, $sql, []);
-	while ($row = pg_fetch_assoc($result, null)) {
-		$row['id'] = intval($row['id']);
-		$row['qty'] = intval($row['qty']);
-		$row['price'] = floatval($row['price']);
-		array_push($ret, $row);
-	}
-	pg_free_result($result);
-	return $ret;
+function fixtype($row) {
+	$row['id'] = intval($row['id']);
+	$row['qty'] = intval($row['qty']);
+	$row['price'] = floatval($row['price']);
+	return $row;
 }
 
 function select_by_cat($conn, $cat) {
 	$ret = [];
-	$sql = 'SELECT * FROM test WHERE cat = $1';
+	$sql = 'SELECT * FROM test WHERE cat = $1 ORDER BY id';
 	$result = pg_query_params($conn, $sql, [$cat]);
 	while ($row = pg_fetch_assoc($result, null)) {
-		$row['id'] = intval($row['id']);
-		$row['qty'] = intval($row['qty']);
-		$row['price'] = floatval($row['price']);
+		$row = fixtype($row);
 		array_push($ret, $row);
 	}
 	pg_free_result($result);
 	return $ret;
 }
 
+// Use this to test whether record exists
 function select_by_id($conn, $id) {
+	$ret = [];
+	$sql = 'SELECT * FROM test WHERE id = $1';
+	$result = pg_query_params($conn, $sql, [$id]);
+	while ($row = pg_fetch_assoc($result, null)) {
+		$row = fixtype($row);
+		array_push($ret, $row);
+	}
+	pg_free_result($result);
+	return $ret;
+}
+
+// Throws exception if record does not exists.
+function get_by_id($conn, $id) {
 	$sql = 'SELECT * FROM test WHERE id = $1';
 	$result = pg_query_params($conn, $sql, [$id]);
 	$row = pg_fetch_assoc($result, null);
 	pg_free_result($result);
-	if ($row) {
-		$row['id'] = intval($row['id']);
-		$row['qty'] = intval($row['qty']);
-		$row['price'] = floatval($row['price']);
-	} else {
-		$row = null;
-	}
+
+	if (!$row)
+		throw new Exception("Id $id not found.");
+
+	$row = fixtype($row);
 	return $row;
 }
 
-function select_total($conn, $cat) {
+function get_total_by_cat($conn, $cat) {
 	$sql = 'SELECT sum(price) AS total FROM test WHERE cat = $1';
 	$result = pg_query_params($conn, $sql, [$cat]);
 	$row = pg_fetch_assoc($result, null);
 	pg_free_result($result);
 	$ret = $row['total'];
+	return $ret;
+}
+
+function update($conn, $id, $price, $qty) {
+	$sql = 'UPDATE test SET price = $1, qty = $2 WHERE id = $3';
+	$result = pg_query_params($conn, $sql, [$price, $qty, $id]);
+	$ret = pg_affected_rows($result);
+	pg_query('COMMIT');
+	pg_free_result($result);
 	return $ret;
 }
 
@@ -84,15 +94,7 @@ function delete_by_cat($conn, $cat) {
 	return $ret;
 }
 
-function update($conn, $id, $price, $qty) {
-	$sql = 'UPDATE test SET price = $1, qty = $2 WHERE id = $3';
-	$result = pg_query_params($conn, $sql, [$price, $qty, $id]);
-	$ret = pg_affected_rows($result);
-	pg_query('COMMIT');
-	pg_free_result($result);
-	return $ret;
-}
-
+// Test functions
 function asserteq($actual, $expected, $reason = '') {
 	if ($actual !== $expected) {
 		throw new Exception("Failed on {$actual}, expected {$expected}. {$reason}");
@@ -104,7 +106,13 @@ function isclose($a, $b) {
 	}
 	return false;
 }
+function create_conn() {
+	$conn = pg_connect("host=localhost dbname=testdb user=zemian password=test123")
+    or die('Could not connect: ' . pg_last_error());
+    return $conn;
+}
 
+$conn = create_conn();
 try {
 	$test_cat = substr(uniqid(), 0, 10);
 	$test_count = 25;
@@ -128,26 +136,25 @@ try {
 	asserteq($rows[1]['price'] > 0.10, true, "{$rows[1]['price']}");
 	asserteq($rows[1]['qty'], 2);
 
-
-	echo("Test select_all\n");
-	$rows = select_all($conn);
-	asserteq(count($rows) >= $test_count, true);
-
-	echo("Test select_by_id\n");
-	$row = select_by_id($conn, $test_ids[0]);
+	echo("Test get_by_id\n");
+	$row = get_by_id($conn, $test_ids[0]);
 	asserteq($row['id'], $test_ids[0]);
 	asserteq($row['cat'], $test_cat);
 	asserteq(isclose($row['price'], 1.10), true, "{$row['price']}");
 	asserteq($row['qty'], 1);
 
-	echo("Test select_total\n");
-	$total = select_total($conn, $test_cat);
+	echo("Test get_total_by_cat\n");
+	$total = get_total_by_cat($conn, $test_cat);
 	asserteq(isclose($total, 327.5000), true, "$total");
+
+	echo("Test conn reconnect\n");
+	pg_close($conn);
+	$conn = create_conn();
 
 	echo("Test update\n");
 	$count = update($conn, $test_ids[0], 0.99, 998877);
 	asserteq($count, 1);
-	$row = select_by_id($conn, $test_ids[0]);
+	$row = get_by_id($conn, $test_ids[0]);
 	asserteq($row['id'], $test_ids[0]);
 	asserteq($row['cat'], $test_cat);
 	asserteq(isclose($row['price'], 0.99), true, "{$row['price']}");
@@ -156,8 +163,8 @@ try {
 	echo("Test delete_by_id\n");
 	$count = delete_by_id($conn, $test_ids[0]);
 	asserteq($count, 1);
-	$row = select_by_id($conn, $test_ids[0]);
-	asserteq($row, null);
+	$rows = select_by_id($conn, $test_ids[0]);
+	asserteq(count($rows), 0);
 
 	echo("Test delete_by_cat\n");
 	$count = delete_by_cat($conn, $test_cat);
