@@ -26,7 +26,7 @@ function fixtype($row) {
 
 function select_by_cat($conn, $cat) {
 	$ret = [];
-	$sql = 'SELECT * FROM test WHERE cat = $1 ORDER BY id';
+	$sql = 'SELECT id, cat, price, qty FROM test WHERE cat = $1 ORDER BY id';
 	$result = pg_query_params($conn, $sql, [$cat]);
 	while ($row = pg_fetch_assoc($result, null)) {
 		$row = fixtype($row);
@@ -39,7 +39,7 @@ function select_by_cat($conn, $cat) {
 // Use this to test whether record exists
 function select_by_id($conn, $id) {
 	$ret = [];
-	$sql = 'SELECT * FROM test WHERE id = $1';
+	$sql = 'SELECT id, cat, price, qty FROM test WHERE id = $1';
 	$result = pg_query_params($conn, $sql, [$id]);
 	while ($row = pg_fetch_assoc($result, null)) {
 		$row = fixtype($row);
