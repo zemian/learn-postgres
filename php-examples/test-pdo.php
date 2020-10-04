@@ -8,7 +8,7 @@ function create_conn() {
 
 function insert($conn, $cat, $price, $qty) {
 	$ret = 0;
-	$sql = 'INSERT INTO test(cat, price, qty) VALUES (?, ?, ?) RETURNING id';
+	$sql = 'INSERT INTO test(cat, price, qty) VALUES (?, ?, ?)';
 	$stmt = $conn->prepare($sql);
 	$stmt->bindParam(1, $cat);
 	$stmt->bindParam(2, $price);
