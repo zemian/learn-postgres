@@ -2,50 +2,48 @@
 
 // Example to test simple CRUD operations
 function create_conn() {
-	$conn = pg_connect("host=localhost dbname=testdb user=zemian password=test123")
-    	or die('Could not connect: ' . pg_last_error());
-    return $conn;
+	$conn = new PDO('pgsql:host=localhost;dbname=testdb', 'zemian', 'test');
+	return $conn;
 }
 
 function insert($conn, $cat, $price, $qty) {
-	$sql = 'INSERT INTO test(cat, price, qty) VALUES ($1, $2, $3) RETURNING id';
-	$result = pg_query_params($conn, $sql, [$cat, $price, $qty]);
-	$row = pg_fetch_assoc($result, null);
-	$ret = intval($row['id']);
-	pg_query('COMMIT');
-	pg_free_result($result);
+	$ret = 0;
+	$sql = 'INSERT INTO test(cat, price, qty) VALUES (?, ?, ?) RETURNING id';
+	$stmt = $conn->prepare($sql);
+	$stmt->bindParam(1, $cat);
+	$stmt->bindParam(2, $price);
+	$stmt->bindParam(3, $qty);
+	if ($stmt->execute()) {
+		$ret = intval($conn->lastInsertId());
+	}
 	return $ret;
-}
-
-function fixtype($row) {
-	$row['id'] = intval($row['id']);
-	$row['qty'] = intval($row['qty']);
-	$row['price'] = floatval($row['price']);
-	return $row;
 }
 
 function select_by_cat($conn, $cat) {
 	$ret = [];
-	$sql = 'SELECT * FROM test WHERE cat = $1 ORDER BY id';
-	$result = pg_query_params($conn, $sql, [$cat]);
-	while ($row = pg_fetch_assoc($result, null)) {
-		$row = fixtype($row);
-		array_push($ret, $row);
+	$sql = 'SELECT * FROM test WHERE cat = ? ORDER BY id';
+	$stmt = $conn->prepare($sql);
+	$stmt->bindParam(1, $cat);
+	if ($stmt->execute()) {
+		while($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+			array_push($ret, $row);
+		}
 	}
-	pg_free_result($result);
 	return $ret;
 }
 
 // Use this to test whether record exists
 function select_by_id($conn, $id) {
 	$ret = [];
-	$sql = 'SELECT * FROM test WHERE id = $1';
-	$result = pg_query_params($conn, $sql, [$id]);
-	while ($row = pg_fetch_assoc($result, null)) {
-		$row = fixtype($row);
-		array_push($ret, $row);
+	$sql = 'SELECT * FROM test WHERE id = ?';
+	$stmt = $conn->prepare($sql);
+	$stmt->bindParam(1, $id);
+	if ($stmt->execute()) {
+		$row = $stmt->fetch(PDO::FETCH_ASSOC);
+		if ($row) {
+			array_push($ret, $row);
+		}
 	}
-	pg_free_result($result);
 	return $ret;
 }
 
@@ -60,38 +58,51 @@ function get_by_id($conn, $id) {
 }
 
 function get_total_by_cat($conn, $cat) {
-	$sql = 'SELECT sum(price) AS total FROM test WHERE cat = $1';
-	$result = pg_query_params($conn, $sql, [$cat]);
-	$row = pg_fetch_assoc($result, null);
-	pg_free_result($result);
-	$ret = $row['total'];
+	$ret = null;
+	$sql = 'SELECT sum(price) AS total FROM test WHERE cat = ?';
+	$stmt = $conn->prepare($sql);
+	$stmt->bindParam(1, $cat);
+	if ($stmt->execute()) {
+		$row = $stmt->fetch(PDO::FETCH_ASSOC);
+		if ($row) {
+			$ret = $row['total'];
+		}
+	}
 	return $ret;
 }
 
 function update($conn, $id, $price, $qty) {
-	$sql = 'UPDATE test SET price = $1, qty = $2 WHERE id = $3';
-	$result = pg_query_params($conn, $sql, [$price, $qty, $id]);
-	$ret = pg_affected_rows($result);
-	pg_query('COMMIT');
-	pg_free_result($result);
+	$ret = 0;
+	$sql = 'UPDATE test SET price = ?, qty = ? WHERE id = ?';
+	$stmt = $conn->prepare($sql);
+	$stmt->bindParam(1, $price);
+	$stmt->bindParam(2, $qty);
+	$stmt->bindParam(3, $id);
+	if ($stmt->execute()) {
+		$ret = $stmt->rowCount();
+	}
 	return $ret;
 }
 
 function delete_by_id($conn, $id) {
-	$sql = 'DELETE FROM test WHERE id = $1';
-	$result = pg_query_params($conn, $sql, [$id]);
-	$ret = pg_affected_rows($result);
-	pg_query('COMMIT');
-	pg_free_result($result);
+	$ret = 0;
+	$sql = 'DELETE FROM test WHERE id = ?';
+	$stmt = $conn->prepare($sql);
+	$stmt->bindParam(1, $id);
+	if ($stmt->execute()) {
+		$ret = $stmt->rowCount();
+	}
 	return $ret;
 }
 
 function delete_by_cat($conn, $cat) {
-	$sql = 'DELETE FROM test WHERE cat = $1';
-	$result = pg_query_params($conn, $sql, [$cat]);
-	$ret = pg_affected_rows($result);
-	pg_query('COMMIT');
-	pg_free_result($result);
+	$ret = 0;
+	$sql = 'DELETE FROM test WHERE cat = ?';
+	$stmt = $conn->prepare($sql);
+	$stmt->bindParam(1, $cat);
+	if ($stmt->execute()) {
+		$ret = $stmt->rowCount();
+	}
 	return $ret;
 }
 
@@ -144,7 +155,7 @@ try {
 	asserteq(isclose($total, 327.5000), true, "$total");
 
 	echo("Test conn reconnect\n");
-	pg_close($conn);
+	$conn = null;
 	$conn = create_conn();
 
 	echo("Test update\n");
@@ -168,5 +179,5 @@ try {
 	$rows = select_by_cat($conn, $test_cat);
 	asserteq(count($rows), 0);
 } finally {
-	pg_close($conn);
+	$conn = null;
 }
