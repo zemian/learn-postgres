@@ -21,7 +21,7 @@ function insert($conn, $cat, $price, $qty) {
 
 function select_by_cat($conn, $cat) {
 	$ret = [];
-	$sql = 'SELECT * FROM test WHERE cat = ? ORDER BY id';
+	$sql = 'SELECT id, cat, price, qty FROM test WHERE cat = ? ORDER BY id';
 	$stmt = $conn->prepare($sql);
 	$stmt->bindParam(1, $cat);
 	if ($stmt->execute()) {
@@ -35,7 +35,7 @@ function select_by_cat($conn, $cat) {
 // Use this to test whether record exists
 function select_by_id($conn, $id) {
 	$ret = [];
-	$sql = 'SELECT * FROM test WHERE id = ?';
+	$sql = 'SELECT id, cat, price, qty FROM test WHERE id = ?';
 	$stmt = $conn->prepare($sql);
 	$stmt->bindParam(1, $id);
 	if ($stmt->execute()) {
