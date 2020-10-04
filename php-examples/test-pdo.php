@@ -2,7 +2,7 @@
 
 // Example to test simple CRUD operations
 function create_conn() {
-	$conn = new PDO('pgsql:host=localhost;dbname=testdb', 'zemian', 'test');
+	$conn = new PDO('pgsql:host=localhost;dbname=testdb', 'zemian', 'test123');
 	return $conn;
 }
 

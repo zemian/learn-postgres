@@ -3,7 +3,7 @@
 // A simple DB connection test
 try {
 	echo "Connection Test: ";
-	$conn = new PDO('pgsql:host=localhost;dbname=testdb', 'zemian', 'test');
+	$conn = new PDO('pgsql:host=localhost;dbname=testdb', 'zemian', 'test123');
 	echo "Successful!\n";
 
 	echo "Query Test:\n";
